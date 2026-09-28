@@ -67,10 +67,23 @@ else()
   endif()
 endif()
 
-set(_cycles_lib_dir "${CMAKE_CURRENT_SOURCE_DIR}/lib/${_cycles_lib_platform}")
+# The precompiled dependency libraries normally live in `lib/<platform>` inside
+# the source tree. CYCLES_LIB_DIR overrides the base directory that contains
+# `<platform>` (and `legacy/<platform>`), which is useful when Cycles is fetched
+# without its submodules or shared between several builds.
+set(CYCLES_LIB_DIR "" CACHE PATH
+    "Directory containing the precompiled Blender dependency libraries")
+mark_as_advanced(CYCLES_LIB_DIR)
+
+if(CYCLES_LIB_DIR)
+  set(_cycles_lib_dir "${CYCLES_LIB_DIR}/${_cycles_lib_platform}")
+  set(_cycles_lib_dir_legacy "${CYCLES_LIB_DIR}/legacy/${_cycles_lib_platform}")
+else()
+  set(_cycles_lib_dir "${CMAKE_CURRENT_SOURCE_DIR}/lib/${_cycles_lib_platform}")
+  set(_cycles_lib_dir_legacy "${CMAKE_CURRENT_SOURCE_DIR}/lib/legacy/${_cycles_lib_platform}")
+endif()
 
 # Use legacy libraries for compatibility with Houdini or USD without oneTBB.
-set(_cycles_lib_dir_legacy "${CMAKE_CURRENT_SOURCE_DIR}/lib/legacy/${_cycles_lib_platform}")
 if((HOUDINI_ROOT AND HOUDINI_VERSION_MAJOR VERSION_LESS 21) OR WITH_LEGACY_LIBRARIES)
   set(_cycles_use_legacy_libs ON)
   set(_cycles_lib_dir "${_cycles_lib_dir_legacy}")

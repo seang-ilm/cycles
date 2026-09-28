@@ -82,7 +82,8 @@ include(macros)
 
 set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "Install message verbosity")
 
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND
+   CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/install" CACHE PATH "Installation path" FORCE)
 endif()
 
@@ -98,8 +99,11 @@ endif()
 # Blender source code and when building it from it's own repository.
 set(CYCLES_STANDALONE_REPOSITORY TRUE)
 
-# Force standalone build.
-set(WITH_CYCLES_STANDALONE TRUE)
+# Force standalone build, unless a parent project explicitly overrides it (for
+# example a superbuild that embeds Cycles and does not need the executable).
+if(NOT DEFINED WITH_CYCLES_STANDALONE)
+  set(WITH_CYCLES_STANDALONE TRUE)
+endif()
 
 # Global compile definitions since add_definitions() adds for all.
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
@@ -127,6 +131,10 @@ option(WITH_CYCLES_PUGIXML          "Build with XML support" ON)
 option(WITH_CYCLES_NANOVDB          "Build with NanoVDB support" ON)
 option(WITH_CYCLES_OSL              "Build with OSL support" ON)
 option(WITH_CYCLES_USD              "Build with USD support" ON)
+option(WITH_CYCLES_DEVELOPMENT_INSTALL
+       "Install Cycles as a reusable development library (headers, a combined \
+shared library and a CMake package) for external consumers." OFF)
+mark_as_advanced(WITH_CYCLES_DEVELOPMENT_INSTALL)
 
 option(WITH_LEGACY_LIBRARIES        "Build with older VFX platform 2024 libraries, for compatibility with Houdini or USD" OFF)
 
@@ -260,3 +268,10 @@ include_directories(
 
 add_subdirectory(src)
 add_subdirectory(third_party)
+
+###########################################################################
+# Optional development installation.
+
+if(WITH_CYCLES_DEVELOPMENT_INSTALL)
+  include(development_install)
+endif()

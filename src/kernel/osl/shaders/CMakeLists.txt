@@ -160,7 +160,7 @@ foreach(_file ${SRC_OSL})
   set(_OSL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${_file})
   set_source_files_properties(${_file} PROPERTIES HEADER_FILE_ONLY TRUE)
   string(REPLACE ".osl" ".oso" _OSO_FILE ${_OSL_FILE})
-  string(REPLACE ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} _OSO_FILE ${_OSO_FILE})
+  string(REPLACE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR} _OSO_FILE ${_OSO_FILE})
   add_custom_command(
     OUTPUT ${_OSO_FILE}
     COMMAND
@@ -186,3 +186,35 @@ cycles_set_solution_folder(cycles_osl_shaders)
 # CMAKE_CURRENT_SOURCE_DIR is already included in OSO paths
 delayed_install("" "${SRC_OSO}" ${CYCLES_INSTALL_PATH}/shader)
 delayed_install("${CMAKE_CURRENT_SOURCE_DIR}" "${SRC_OSL_HEADERS}" ${CYCLES_INSTALL_PATH}/shader)
+
+# External projects that embed Cycles without installing it (for example a
+# superbuild using add_subdirectory) still need a shader directory containing
+# both the compiled .oso files and the shader headers, since Cycles locates
+# them through path_get("shader"). Aggregate them in the build tree and expose
+# the location through CYCLES_BUILD_SHADER_DIR.
+if(WITH_CYCLES_DEVELOPMENT_INSTALL)
+  set(_cycles_shader_header_files)
+  foreach(_header IN LISTS SRC_OSL_HEADERS)
+    if(IS_ABSOLUTE "${_header}")
+      list(APPEND _cycles_shader_header_files "${_header}")
+    else()
+      list(APPEND _cycles_shader_header_files "${CMAKE_CURRENT_SOURCE_DIR}/${_header}")
+    endif()
+  endforeach()
+
+  set(CYCLES_BUILD_SHADER_DIR "${PROJECT_BINARY_DIR}/shader" CACHE INTERNAL
+      "Build-tree directory containing the Cycles OSL shaders and headers")
+
+  add_custom_command(
+    OUTPUT "${CYCLES_BUILD_SHADER_DIR}/.stamp"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CYCLES_BUILD_SHADER_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${SRC_OSO} ${_cycles_shader_header_files} "${CYCLES_BUILD_SHADER_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E touch "${CYCLES_BUILD_SHADER_DIR}/.stamp"
+    DEPENDS ${SRC_OSO} ${_cycles_shader_header_files}
+    VERBATIM
+  )
+  add_custom_target(cycles_build_shaders ALL
+    DEPENDS "${CYCLES_BUILD_SHADER_DIR}/.stamp")
+  cycles_set_solution_folder(cycles_build_shaders)
+endif()

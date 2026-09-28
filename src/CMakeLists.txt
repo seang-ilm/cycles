@@ -454,3 +454,15 @@ if(NOT WITH_BLENDER)
     delayed_do_install(${CMAKE_BINARY_DIR}/bin)
   endif()
 endif()
+
+# Capture the effective include directories and compile definitions used to
+# build Cycles. These are exported by the optional development installation so
+# external consumers compile against headers exactly like Cycles itself does.
+if(WITH_CYCLES_DEVELOPMENT_INSTALL AND NOT WITH_BLENDER)
+  get_property(_cycles_export_include_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
+  get_property(_cycles_export_compile_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+  set(CYCLES_EXPORT_INCLUDE_DIRS "${_cycles_export_include_dirs}" CACHE INTERNAL
+      "Include directories used to build Cycles")
+  set(CYCLES_EXPORT_COMPILE_DEFINITIONS "${_cycles_export_compile_definitions}" CACHE INTERNAL
+      "Compile definitions used to build Cycles")
+endif()
